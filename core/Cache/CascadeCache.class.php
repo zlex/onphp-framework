@@ -158,9 +158,9 @@
 			$result = $this->remotePeer->store($action, $key, $value, $expires);
 			
 			if ($result)
-				$this->cacheLocal($key, $value);
+				$this->cacheLocal($key, $value, $expires);
 			elseif ($action == 'replace')
-				$this->cacheLocal($key, null);
+				$this->cacheLocal($key, null, $expires);
 			
 			return $result;
 		}
@@ -168,15 +168,15 @@
 		/**
 		 * @return CascadeCache
 		**/
-		private function cacheLocal($key, $value)
+		private function cacheLocal(
+			$key, $value, $expires = Cache::EXPIRES_MEDIUM
+		)
 		{
 			if (!$value)
 				$value = self::LOCAL_NULL_VALUE;
 			
-			$expires =
-				array_key_exists($this->className, $this->localTtlMap)
-					? $this->localTtlMap[$this->className]
-					: Cache::EXPIRES_MEDIUM;
+			if (array_key_exists($this->className, $this->localTtlMap))
+				$expires = $this->localTtlMap[$this->className];
 			
 			$this->localPeer->set($key, $value, $expires);
 			
