@@ -9,7 +9,6 @@
  *   License, or (at your option) any later version.                       *
  *                                                                         *
  ***************************************************************************/
-/* $Id$ */
 
 	/**
 	 * Date's container and utilities.
@@ -123,18 +122,7 @@
 
 		public function __construct($date)
 		{
-			if (is_int($date) || is_numeric($date)) { // unix timestamp
-				$this->string = date($this->getFormat(), $date);
-			} elseif ($date && is_string($date))
-				$this->stringImport($date);
-			
-			if ($this->string === null) {
-				throw new WrongArgumentException(
-					"strange input given - '{$date}'"
-				);
-			}
-			
-			$this->import($this->string);
+			$this->import($date);
 			$this->buildInteger();
 		}
 
@@ -142,10 +130,10 @@
 		{
 			return array('int');
 		}
-
+		
 		public function  __wakeup()
 		{
-			$this->import(date($this->getFormat(), $this->int));
+			$this->import($this->int);
 		}
 		
 		public function toStamp()
@@ -215,9 +203,7 @@
 						"modification yielded false '{$string}'"
 					);
 				
-				$this->int = $time;
-				$this->string = date($this->getFormat(), $time);
-				$this->import($this->string);
+				$this->int = $this->import($time);
 			} catch (BaseException $e) {
 				throw new WrongArgumentException(
 					"wrong time string '{$string}'"
@@ -301,40 +287,51 @@
 			return 'Y-m-d';
 		}
 		
-		/* void */ protected function import($string)
+		protected function import($string)
 		{
-			list($this->year, $this->month, $this->day) =
-				explode('-', $string, 3);
+			$stamp =
+				is_numeric($string)
+					? intval($string)
+					: $this->stringToStamp($string);
 			
-			if (!$this->month || !$this->day)
+			list($this->year, $this->month, $this->day) =
+				explode('_', date('Y_m_d', $stamp), 3); // can be with unary minus
+			
+			if (!checkdate($this->month, $this->day, $this->year)) {
 				throw new WrongArgumentException(
-					'month and day must not be zero'
+					"wrong date format - '{$string}'"
 				);
+			}
 			
-			$this->string =
-				sprintf(
-					'%04d-%02d-%02d',
-					$this->year,
-					$this->month,
-					$this->day
-				);
+			$this->string = date($this->getFormat(), $stamp);
 			
-			list($this->year, $this->month, $this->day) =
-				explode('-', $this->string, 3);
+			return $stamp;
 		}
 		
-		/* void */ protected function stringImport($string)
+		protected function stringToStamp($string)
 		{
-			$matches = array();
-			
 			if (
-				preg_match('/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/', $string, $matches)
+				preg_match(
+					'/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/',
+					$string,
+					$matches
+				)
+				&& !checkdate($matches[2], $matches[3], $matches[1])
 			) {
-				if (checkdate($matches[2], $matches[3], $matches[1]))
-					$this->string = $string;
-				
-			} elseif (($stamp = strtotime($string)) !== false)
-				$this->string = date($this->getFormat(), $stamp);
+				throw new WrongArgumentException(
+					"wrong date format - '{$string}'"
+				);
+			}
+			
+			$stamp = strtotime($string);
+			
+			if (false === $stamp) {
+				throw new WrongArgumentException(
+					"strange input given - '{$string}'"
+				);
+			}
+			
+			return $stamp;
 		}
 		
 		/* void */ protected function buildInteger()

@@ -39,6 +39,13 @@
 			}
 			
 			try {
+				new Timestamp('2011-0-0 20:20:20');
+				$this->fail();
+			} catch (WrongArgumentException $e) {
+				/* pass */
+			}
+			
+			try {
 				new Timestamp('2007-00-00');
 				$this->fail();
 			} catch (WrongArgumentException $e) {
@@ -54,6 +61,13 @@
 			
 			try {
 				new Timestamp('2007-00-01');
+				$this->fail();
+			} catch (WrongArgumentException $e) {
+				/* pass */
+			}
+			
+			try {
+				new Timestamp('-72312312312');
 				$this->fail();
 			} catch (WrongArgumentException $e) {
 				/* pass */

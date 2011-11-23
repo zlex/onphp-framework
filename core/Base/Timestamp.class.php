@@ -9,7 +9,6 @@
  *   License, or (at your option) any later version.                       *
  *                                                                         *
  ***************************************************************************/
-/* $Id$ */
 
 	/**
 	 * Date and time container and utilities.
@@ -101,7 +100,7 @@
 			else
 				return parent::getDayStartStamp();
 		}
-
+		
 		public function getHourStartStamp()
 		{
 			if (!$this->minute && !$this->second)
@@ -123,10 +122,10 @@
 		**/
 		public function toIsoString($convertToUtc = true)
 		{
-			if ($convertToUtc)
-				return date('Y-m-d\TH:i:s\Z', $this->int - date('Z', $this->int));
-			else
-				return date('Y-m-d\TH:i:sO', $this->int);
+			return
+				$convertToUtc
+					? date('Y-m-d\TH:i:s\Z', $this->int - date('Z', $this->int))
+					: date('Y-m-d\TH:i:sO', $this->int);
 		}
 		
 		/**
@@ -142,53 +141,32 @@
 			return 'Y-m-d H:i:s';
 		}
 		
-		/* void */ protected function import($string)
+		protected function import($string)
 		{
-			list($date, $time) = explode(' ', $string, 2);
+			$stamp = parent::import($string);
 			
 			list($this->hour, $this->minute, $this->second) =
-				explode(':', $time, 3);
+				explode(':', date('H:i:s', $stamp), 3);
 			
-			$time =
-				sprintf(
-					'%02d:%02d:%02d',
-					$this->hour,
-					$this->minute,
-					$this->second
-				);
-			
-			list($this->hour, $this->minute, $this->second) =
-				explode(':', $time, 3);
-			
-			parent::import($date);
-			
-			$this->string .= ' '.$time;
+			return $stamp;
 		}
 		
-		/* void */ protected function stringImport($string)
+		protected function stringToStamp($string)
 		{
-			$matches = array();
-			
 			if (
 				preg_match(
 					'/^(\d{1,4})-(\d{1,2})-(\d{1,2})\s\d{1,2}:\d{1,2}:\d{1,2}$/',
 					$string,
 					$matches
 				)
+				&& !checkdate($matches[2], $matches[3], $matches[1])
 			) {
-				if (checkdate($matches[2], $matches[3], $matches[1]))
-					$this->string = $string;
-			} elseif (
-				preg_match(
-					'/^(\d{1,4})-(\d{1,2})-(\d{1,2})$/',
-					$string,
-					$matches
-				)
-			) {
-				if (checkdate($matches[2], $matches[3], $matches[1]))
-					$this->string = $string . ' 00:00:00';
-			} elseif (($stamp = strtotime($string)) !== false)
-				$this->string = date($this->getFormat(), $stamp);
+				throw new WrongArgumentException(
+					"wrong date format - '{$string}'"
+				);
+			}
+			
+			return parent::stringToStamp($string);
 		}
 		
 		/* void */ protected function buildInteger()
